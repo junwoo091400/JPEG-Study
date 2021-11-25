@@ -67,7 +67,7 @@ Oh, 'tuples' are un-mutable. So they are good for key values in dictionary.
 24
 
 7. In which cases do HE trees have the BOTH left & right children at the root?
-8. 
+8. Exact difference between 'bytes' and 'list' with bytes in it?
 
 <IDEA>
 1. Show diff Quantization Table examples (show how you can wrong-ly decode the image.)
@@ -110,6 +110,8 @@ class HuffmanTable:
         self.root=[]
         self.elements = [] # List of all the elements (data)
     
+    # element : element we are going to insert into the Huffman Tree
+    # pos : Length - 1 of the Huffman Code. (i.e. Depth in the Tree.)
     def BitsFromLengths(self, root, element, pos):
         if isinstance(root,list):
             if pos==0: # Element with HE code's bit count of 1 (ex. 0)
@@ -133,6 +135,9 @@ class HuffmanTable:
                 self.BitsFromLengths(self.root, elements[ii], i)
                 ii+=1
 
+    # Input : Stream of a Huffman Code
+    # Returns : Decoded Data instance (ex. The Character)
+    # IF no feasible data is found, could return invalid value. (Error)
     def Find(self,st):
         r = self.root
         while isinstance(r, list):
@@ -147,15 +152,23 @@ class HuffmanTable:
             elif ( res != -1):
                 return res
 
+# Get the list of data out of a 'byte array'
+# handy method for decoding a variable number of bytes from binary data
+def GetArray(type, l, length):
+    s = type * length # Ex. "B"*16
+    return list(unpack(s,l[:length]))
+
 #'''
 class JPEG:
     def __init__(self, image_file):
+        self.huffman_tables = {}
+        self.quant = {}
         with open(image_file, 'rb') as f:
             self.img_data = f.read()
     
     def decodeHuffman(self, data):
         offset = 0
-        header, = unpack("B",data[offset:offset+1])
+        header, = unpack("B",data[offset:offset+1]) # Huffman Header, indicating AC/DC + Destination.
         offset += 1
 
         # Extract the 16 bytes containing length data as a 'tuple'
@@ -172,7 +185,8 @@ class JPEG:
         # Extract the elements after the initial 16 bytes
         elements = []
         for i in lengths:
-            elements += (unpack("B"*i, data[offset:offset+i]))
+            elements += GetArray("B", data[offset:offset+i], i)
+            # You can ADD tuple to the list object.
             # Each 'element' is assumed to be a Byte
             offset += i 
         # Adding 'tuples' https://www.programiz.com/python-programming/list-vs-tuples
@@ -181,14 +195,22 @@ class JPEG:
         print("lengths: ", lengths)
         print("Elements: ", len(elements))
 
+        print(elements)
+
         hf = HuffmanTable()
         hf.GetHuffmanBits(lengths, elements)
         data = data[offset:] # Why?
     
+    def DefineQuantizationTables(self, data):
+        hdr, = unpack("B",data[0:1])
+        self.quant[hdr] =  GetArray("B", data[1:1+64],64)
+        print('QT with idx :', hdr, self.quant[hdr])
+        #data = data[65:]
+
     def decode(self):
-        data = self.img_data
+        data = self.img_data # 'bytes' data type.
         while(True):
-            marker, = unpack(">H", data[0:2])
+            marker, = unpack(">H", data[0:2]) # HEX, Big Endian. MSB first.
             print(marker_mapping.get(marker))
             if marker == 0xffd8: # Start of Image
                 data = data[2:]
@@ -203,6 +225,7 @@ class JPEG:
                 if marker == 0xffdb: # Quantization Table
                     print('QT Sneek :', chunk)
                     # Length and Destination info is taking 3 bytes (Hence length of 67 bytes.)
+                    self.DefineQuantizationTables(chunk)
                 elif marker == 0xffc4: # Huffman Table
                     self.decodeHuffman(chunk)
                     #print('HT Sneek :', data[4:2+lenchunk]) # From 'Class' to End.
