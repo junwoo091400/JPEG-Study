@@ -285,6 +285,7 @@ class JPEG:
         st = Stream(data)
         oldlumdccoeff, oldCbdccoeff, oldCrdccoeff = 0, 0, 0
         print('Height :', self.height, ', Width :', self.width)
+        
         for y in range(self.height // 8):
             for x in range(self.width // 8):
                 matL, oldlumdccoeff = self.BuildMatrix(

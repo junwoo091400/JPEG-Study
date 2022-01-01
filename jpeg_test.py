@@ -379,11 +379,13 @@ class JPEG:
             print(ht.root) 
         print(self.quant)
         print(self.quantMapping)
+
         data,lenchunk = RemoveFF00(data[hdrlen:]) # Only get the Image Data.
         # Image data as a list of bytes, length of the image data is returned!
         st = Stream(data)
         oldlumdccoeff, oldCbdccoeff, oldCrdccoeff = 0, 0, 0
         print('Height :', self.height, ', Width :', self.width)
+        
         for y in range(self.height//8):
             for x in range(self.width//8):
                 #print('Processing image height idx', y, ', width idx', x)
